@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>DONE_FR</title>
+	<meta charset="utf-8">
+	<!-- Compiled w/ P5LIVE, http://github.com/ffd8/p5live -->
+	<style type="text/css">
+		body{
+			margin:0;
+			overflow:hidden;
+		}
+		canvas{
+			position:fixed;
+			top:0;
+			left:0;
+			z-index:-1;
+			width:100vw;
+			height:100vh;
+			margin:0;
+		}
+	</style>
+	<script type="text/javascript">
+		// eco-mode = only render if window focused
+		window.onblur = function () {
+			noLoop();
+		};
+		window.onfocus = function () {
+			loop();
+		};
+	</script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5@2/lib/p5.min.js"></script>
+<script type="text/javascript" src="https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.js"></script>
+</head>
+<body style="background: rgb(0, 0, 0);">
+
+<script type="text/javascript">
+//DONE_FR
+
+/* CUSTOM FUNCTIONS FOR P5LIVE */
+// keep fullscreen if window resized
+function windowResized() {
+	resizeCanvas(windowWidth, windowHeight);
+}
+
+// custom ease function
+function ease(iVal, oVal, eVal){
+	return oVal += (iVal - oVal) * eVal;
+}
+
+// processing compatibility
+function println(msg){
+	print(msg);
+}
+
+
+let libs = ['https://cdn.jsdelivr.net/npm/p5.brush@latest/dist/p5.brush.js']
+// p5 = '2'
+
+
+// drawing state
+let tool      = 'brushCircle';
+let blendName = 'BLEND';
+let penColor;
+let size      = 50;
+let density   = 10;
+let opacity   = 180;
+let hatchGap  = 7;
+let hatchDeg  = 35;
+
+// ui references
+let panel;
+let colorPick, bgPick;
+let sizeSlider;
+let densLabel, densSlider;
+let blendLabel, blendSelect;
+let opacLabel, opacSlider;
+
+let TEXTURED = ['brushCircle', 'brushLine', 'brushHatch'];
+let SIMPLE   = ['simpleLine', 'simpleCircle', 'simpleSquare', 'simpleTriangle'];
+
+
+// runs once at the start
+function setup() {
+  let canvas = createCanvas(windowWidth, windowHeight, WEBGL);
+  penColor = color(255, 182, 193);
+  canvas.elt.style.background = 'transparent';
+  document.body.style.background = '#ffffff';
+  document.body.style.margin = '0';
+  document.body.style.overflow = 'hidden';
+  brush.scaleBrushes(3);
+  buildUI();
+}
+
+
+// runs every frame — draws when mouse is pressed
+function draw() {
+  if (!mouseIsPressed || mouseIsPanel()) return;
+
+  if (TEXTURED.includes(tool)) {
+    drawTextured();
+  } else if (SIMPLE.includes(tool)) {
+    blendMode(window[blendName]);
+    drawSimple();
+    blendMode(BLEND);
+  }
+}
+
+
+// draws textured brushes using the p5.brush library
+function drawTextured() {
+  // WEBGL origin is center, so we offset mouse to match
+  let x  = mouseX  - width / 2;
+  let y  = mouseY  - height / 2;
+  let px = pmouseX - width / 2;
+  let py = pmouseY - height / 2;
+
+  if (tool === 'brushCircle') {
+    brush.noStroke();
+    brush.fill(penColor, 120);
+    brush.circle(x, y, size);
+  }
+
+  if (tool === 'brushLine') {
+    for (let i = 0; i < density; i++) {
+      let ox = random(-size, size);
+      let oy = random(-size, size);
+      brush.set('HB', penColor, random(0.4, 1));
+      brush.noFill();
+      brush.line(px + ox, py + oy, x + ox, y + oy);
+    }
+  }
+
+  if (tool === 'brushHatch') {
+    brush.set('rotring', penColor, 0.8);
+    brush.noFill();
+    brush.hatch(hatchGap, hatchDeg);
+    brush.rect(x, y, size, size, 'center');
+  }
+}
+
+
+// draws simple geometric shapes using native p5.js
+function drawSimple() {
+  // WEBGL origin is center, so we offset mouse to match
+  let x  = mouseX  - width / 2;
+  let y  = mouseY  - height / 2;
+  let px = pmouseX - width / 2;
+  let py = pmouseY - height / 2;
+  let r  = red(penColor);
+  let g  = green(penColor);
+  let b  = blue(penColor);
+  let s  = size / 2; // divide by 2 to visually match textured brush sizes
+
+  noStroke();
+  fill(r, g, b, opacity);
+
+  if (tool === 'simpleLine') {
+    stroke(r, g, b, opacity);
+    strokeWeight(size);
+    noFill();
+    line(px, py, x, y);
+  }
+
+  if (tool === 'simpleCircle') {
+    ellipse(x, y, s, s);
+  }
+
+  if (tool === 'simpleSquare') {
+    rectMode(CENTER);
+    rect(x, y, s, s);
+  }
+
+  if (tool === 'simpleTriangle') {
+    triangle(
+      x,     y - s,  // top
+      x - s, y + s,  // bottom left
+      x + s, y + s   // bottom right
+    );
+  }
+}
+
+
+// checks if mouse is over the panel to avoid drawing on it
+function mouseIsPanel() {
+  let overPanel = true;
+  let pos = panel.position();
+  let dim = panel.size();
+  let b   = 25;
+  if (mouseX < pos.x - b || mouseX > pos.x + dim.width + b ||
+      mouseY < pos.y - b || mouseY > pos.y + dim.height + b) {
+    overPanel = false;
+  }
+  return overPanel;
+}
+
+
+// note: invert is unreliable in WEBGL — works best right after drawing, not during
+function invertColors() {
+  loadPixels();
+  for (let i = 0; i < pixels.length; i += 4) { // noprotect
+    pixels[i]     = 255 - pixels[i];
+    pixels[i + 1] = 255 - pixels[i + 1];
+    pixels[i + 2] = 255 - pixels[i + 2];
+  }
+  updatePixels();
+}
+
+
+// keyboard shortcuts
+function keyPressed() {
+  if (keyCode === 67) { clear(); document.body.style.background = bgPick.value(); } // C = clear
+  if (keyCode === 32) { invertColors(); }                                            // Space = invert
+  if (keyCode === 38) { size += 5;               sizeSlider.value(size); }          // Up = bigger
+  if (keyCode === 40) { size = max(1, size - 5); sizeSlider.value(size); }          // Down = smaller
+}
+
+
+// resizes canvas when window changes size
+function windowResized() {
+  resizeCanvas(windowWidth, windowHeight);
+}
+
+
+// dims or undims a single element
+function setDimmed(el, dimmed) {
+  el.style('opacity',        dimmed ? '0.35' : '1');
+  el.style('pointer-events', dimmed ? 'none'  : 'auto');
+}
+
+
+// dims/undims sliders based on which tool is active
+function refreshDimming() {
+  let isSimple   = SIMPLE.includes(tool);
+  let hasDensity = tool === 'brushLine' || tool === 'brushHatch';
+
+  setDimmed(densLabel,   !hasDensity);
+  setDimmed(densSlider,  !hasDensity);
+  setDimmed(blendLabel,  !isSimple);
+  setDimmed(blendSelect, !isSimple);
+  setDimmed(opacLabel,   !isSimple);
+  setDimmed(opacSlider,  !isSimple);
+}
+
+
+// builds the whole UI panel
+function buildUI() {
+  panel = createDiv()
+    .class('guiHolder');
+
+  // title bar — drag to move, click to collapse
+  let titleBar = createDiv('⠿ DROTOOL ▾')
+    .parent(panel)
+    .class('titleBar')
+    .draggable(panel)
+    .mousePressed(() => {
+      if (panel.elt.style.height === '32px') {
+        panel.style('height', 'auto');
+        titleBar.html('⠿ DROTOOL ▾');
+      } else {
+        panel.style('height', '32px');
+        titleBar.html('⠿ DROTOOL ▸');
+      }
+    });
+
+  // textured brushes dropdown
+  createDiv('Textured Brushes')
+    .parent(panel)
+    .class('label');
+
+  let texturedSelect = createSelect()
+    .parent(panel)
+    .class('select');
+
+  texturedSelect.option('select', '');
+  texturedSelect.option('Circle', 'brushCircle');
+  texturedSelect.option('Line',   'brushLine');
+  texturedSelect.option('Hatch',  'brushHatch');
+  texturedSelect.selected('brushCircle');
+  texturedSelect.changed(function () {
+    if (this.value() === '') return;
+    tool = this.value();
+    simpleSelect.selected('select');
+    refreshDimming();
+  });
+
+  // size slider
+  createDiv('Size')
+    .parent(panel)
+    .class('label');
+
+  sizeSlider = createSlider(0, 1500, size, 1)
+    .parent(panel)
+    .class('slider')
+    .input(function () { size = this.value(); });
+
+  // density slider — only active for brushLine and brushHatch
+  densLabel = createDiv('Density')
+    .parent(panel)
+    .class('label');
+
+  densSlider = createSlider(1, 80, density, 1)
+    .parent(panel)
+    .class('slider')
+    .input(function () {
+      if (tool === 'brushLine')  density  = int(this.value());
+      if (tool === 'brushHatch') hatchGap = max(1, 40 - int(this.value()));
+    });
+
+  // simple brushes dropdown
+  createDiv('Simple Brushes')
+    .parent(panel)
+    .class('label');
+
+  let simpleSelect = createSelect()
+    .parent(panel)
+    .class('select');
+
+  simpleSelect.option('select', '');
+  simpleSelect.option('Line',     'simpleLine');
+  simpleSelect.option('Circle',   'simpleCircle');
+  simpleSelect.option('Square',   'simpleSquare');
+  simpleSelect.option('Triangle', 'simpleTriangle');
+  simpleSelect.selected('select');
+  simpleSelect.changed(function () {
+    if (this.value() === '') return;
+    tool = this.value();
+    texturedSelect.selected('select');
+    refreshDimming();
+  });
+
+  // blend mode — only active for simple brushes
+  blendLabel = createDiv('Blend Mode')
+    .parent(panel)
+    .class('label');
+
+  blendSelect = createSelect()
+    .parent(panel)
+    .class('select');
+
+  blendSelect.option('BLEND');
+  blendSelect.option('ADD');
+  blendSelect.option('MULTIPLY');
+  blendSelect.option('SCREEN');
+  blendSelect.selected('BLEND');
+  blendSelect.changed(function () { blendName = this.value(); });
+
+  // opacity — only active for simple brushes
+  opacLabel = createDiv('Opacity')
+    .parent(panel)
+    .class('label');
+
+  opacSlider = createSlider(0, 255, opacity, 1)
+    .parent(panel)
+    .class('slider')
+    .input(function () { opacity = this.value(); });
+
+  // brush color picker + black/white swatches
+  createDiv('Brush Color')
+    .parent(panel)
+    .class('label');
+
+  let brushRow = createDiv()
+    .parent(panel)
+    .class('colorRow');
+
+  colorPick = createColorPicker('#ffb6c1')
+    .parent(brushRow)
+    .class('colorpicker')
+    .input(function () { penColor = this.color(); });
+
+  createDiv()
+    .parent(brushRow)
+    .class('swatch')
+    .style('background', '#000000')
+    .mousePressed(() => { penColor = color('#000000'); colorPick.value('#000000'); });
+
+  createDiv()
+    .parent(brushRow)
+    .class('swatch')
+    .style('background', '#ffffff')
+    .mousePressed(() => { penColor = color('#ffffff'); colorPick.value('#ffffff'); });
+
+  // background color picker + black/white swatches
+  createDiv('Background')
+    .parent(panel)
+    .class('label');
+
+  let bgRow = createDiv()
+    .parent(panel)
+    .class('colorRow');
+
+  bgPick = createColorPicker('#ffffff')
+    .parent(bgRow)
+    .class('colorpicker')
+    .input(function () { document.body.style.background = this.value(); });
+
+  createDiv()
+    .parent(bgRow)
+    .class('swatch')
+    .style('background', '#000000')
+    .mousePressed(() => { bgPick.value('#000000'); document.body.style.background = '#000000'; });
+
+  createDiv()
+    .parent(bgRow)
+    .class('swatch')
+    .style('background', '#ffffff')
+    .mousePressed(() => { bgPick.value('#ffffff'); document.body.style.background = '#ffffff'; });
+
+  // invert button
+  createButton('Invert Colors')
+    .parent(panel)
+    .class('btn')
+    .mousePressed(invertColors);
+
+  // clear + reset side by side
+  let clearRow = createDiv()
+    .parent(panel)
+    .class('row');
+
+  createButton('Clear')
+    .parent(clearRow)
+    .class('btnHalf')
+    .mousePressed(() => { clear(); document.body.style.background = bgPick.value(); });
+
+  createButton('Reset')
+    .parent(clearRow)
+    .class('btnHalf')
+    .mousePressed(() => { clear(); document.body.style.background = '#ffffff'; bgPick.value('#ffffff'); });
+
+  // export PNG + JPEG side by side
+  createDiv('Export')
+    .parent(panel)
+    .class('label');
+
+  let exportRow = createDiv()
+    .parent(panel)
+    .class('row');
+
+  createButton('PNG')
+    .parent(exportRow)
+    .class('btnHalf')
+    .mousePressed(() => saveCanvas('drawing', 'png'));
+
+  createButton('JPEG')
+    .parent(exportRow)
+    .class('btnHalf')
+    .mousePressed(() => saveCanvas('drawing', 'jpg'));
+
+  createElement('style', `
+    * {
+      outline: none;
+      box-sizing: border-box;
+    }
+    .guiHolder {
+      position: fixed;
+      left: 16px;
+      top: 16px;
+      width: 160px;
+      background: rgba(255,255,255,0.95);
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      font-family: sans-serif;
+      font-size: 12px;
+      color: #333;
+      z-index: 999;
+      user-select: none;
+      overflow: hidden;
+    }
+    .titleBar {
+      background: #333;
+      color: #fff;
+      padding: 8px 10px;
+      border-radius: 10px 10px 0 0;
+      font-size: 11px;
+      cursor: grab;
+    }
+    .titleBar:active {
+      cursor: grabbing;
+    }
+    .label {
+      padding: 8px 10px 3px 10px;
+      font-size: 11px;
+      color: #555;
+    }
+    .slider {
+      width: 90%;
+      margin: 0 10px;
+      display: block;
+      cursor: pointer;
+    }
+    .select {
+      width: 90%;
+      margin: 0 10px;
+      padding: 4px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      font-size: 11px;
+      display: block;
+      cursor: pointer;
+    }
+    .colorRow {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 10px;
+    }
+    .colorpicker {
+      width: 36px;
+      height: 28px;
+      border: none;
+      background: none;
+      cursor: pointer;
+      padding: 0;
+    }
+    .swatch {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 1px solid #ccc;
+      cursor: pointer;
+    }
+    .swatch:hover {
+      transform: scale(1.1);
+    }
+    .btn {
+      width: 90%;
+      margin: 6px 10px 0 10px;
+      padding: 7px 0;
+      font-size: 11px;
+      background: #f5f5f5;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      cursor: pointer;
+      display: block;
+    }
+    .btn:hover {
+      background: #e5e5e5;
+    }
+    .row {
+      display: flex;
+      gap: 6px;
+      margin: 6px 10px 0 10px;
+    }
+    .row:last-child {
+      margin-bottom: 10px;
+    }
+    .btnHalf {
+      flex: 1;
+      padding: 7px 0;
+      font-size: 11px;
+      background: #333;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+    .btnHalf:hover {
+      background: #555;
+    }
+  `);
+
+  refreshDimming();
+}
+</script>
+
+</body>
+</html>
