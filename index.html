@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<title>DROTOOL</title>
+	<title>Drotool_26</title>
 	<meta charset="utf-8">
 	<!-- Compiled w/ P5LIVE, http://github.com/ffd8/p5live -->
 	<style type="text/css">
@@ -34,7 +34,7 @@
 <body style="background: rgb(0, 0, 0);">
 
 <script type="text/javascript">
-//DONE_FR
+//Drotool_26
 
 /* CUSTOM FUNCTIONS FOR P5LIVE */
 // keep fullscreen if window resized
@@ -203,6 +203,25 @@ function invertColors() {
     pixels[i + 2] = 255 - pixels[i + 2];
   }
   updatePixels();
+}
+
+
+// exports canvas as PNG (transparent) or JPEG (with background color)
+function exportCanvas(format, withBG) {
+  let src = document.querySelector('canvas');
+  let exp = document.createElement('canvas');
+  exp.width  = src.width;
+  exp.height = src.height;
+  let ctx    = exp.getContext('2d');
+  if (withBG) {
+    ctx.fillStyle = bgPick.value();
+    ctx.fillRect(0, 0, exp.width, exp.height);
+  }
+  ctx.drawImage(src, 0, 0);
+  let a      = document.createElement('a');
+  a.href     = exp.toDataURL(format === 'JPEG' ? 'image/jpeg' : 'image/png', 0.95);
+  a.download = 'drawing.' + (format === 'JPEG' ? 'jpg' : 'png');
+  a.click();
 }
 
 
@@ -439,12 +458,12 @@ function buildUI() {
   createButton('PNG')
     .parent(exportRow)
     .class('btnHalf')
-    .mousePressed(() => saveCanvas('drawing', 'png'));
+    .mousePressed(() => exportCanvas('PNG', false));
 
   createButton('JPEG')
     .parent(exportRow)
     .class('btnHalf')
-    .mousePressed(() => saveCanvas('drawing', 'jpg'));
+    .mousePressed(() => exportCanvas('JPEG', true));
 
   createElement('style', `
     * {
