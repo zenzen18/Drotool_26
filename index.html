@@ -139,7 +139,7 @@ function drawTextured() {
 }
 
 
-// draws simple geometric shapes using native p5.js
+// draws simple geometric shapes using p5.js
 function drawSimple() {
   // WEBGL origin is center, so we offset mouse to match
   let x  = mouseX  - width / 2;
@@ -194,7 +194,7 @@ function mouseIsPanel() {
 }
 
 
-// note: invert is unreliable in WEBGL — works best right after drawing, not during
+//invert works best right after drawing, not during
 function invertColors() {
   loadPixels();
   for (let i = 0; i < pixels.length; i += 4) { // noprotect
@@ -206,7 +206,7 @@ function invertColors() {
 }
 
 
-// exports canvas as PNG (transparent) or JPEG (with background color)
+// exports canvas: PNG (transparent) or JPEG (with background color)
 function exportCanvas(format, withBG) {
   let src = document.querySelector('canvas');
   let exp = document.createElement('canvas');
